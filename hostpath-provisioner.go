@@ -43,8 +43,9 @@ import (
 /* Our constants */
 const (
 	resyncPeriod     = 15 * time.Second
-	provisionerName  = "github.com/hostpath"
-	provisionerIDAnn = "github.com/hostpath-provisioner-id"
+	provisionerName  = "k8s-hostpath-provisioner/hostpath"
+	provisionerIDAnn = "k8s-hostpath-provisioner/hostpath-provisioner-id"
+	mappedPathLabel  = "k8s-hostpath-provisioner/mapped-path"
 )
 
 /* Our provisioner class, which implements the controller API. */
@@ -97,9 +98,13 @@ func (p *hostPathProvisioner) Provision(options controller.VolumeOptions) (*v1.P
 	}
 
 	/* Create the on-disk directory. */
-	path := path.Join(params.pvDir, options.PVName)
-	if err := os.MkdirAll(path, 0777); err != nil {
-		glog.Errorf("failed to mkdir %s: %s", path, err)
+	pvPath := path.Join(params.pvDir, options.PVName)
+	labels := options.PVC.GetLabels()
+	if mappedPath, ok := labels[mappedPathLabel]; ok {
+		pvPath = path.Join(params.pvDir, mappedPath)
+	}
+	if err := os.MkdirAll(pvPath, 0777); err != nil {
+		glog.Errorf("failed to mkdir %s: %s", pvPath, err)
 		return nil, err
 	}
 
@@ -119,14 +124,14 @@ func (p *hostPathProvisioner) Provision(options controller.VolumeOptions) (*v1.P
 			},
 			PersistentVolumeSource: v1.PersistentVolumeSource{
 				HostPath: &v1.HostPathVolumeSource{
-					Path: path,
+					Path: pvPath,
 				},
 			},
 		},
 	}
 
 	glog.Infof("successfully created hostpath volume %s (%s)",
-		options.PVName, path)
+		options.PVName, pvPath)
 
 	return pv, nil
 }
