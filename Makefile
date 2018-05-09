@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-REPOSITORY	?= torchbox/k8s-hostpath-provisioner
+REPOSITORY	?= gfleury/k8s-hostpath-provisioner
 TAG		?= latest
 IMAGE		= ${REPOSITORY}:${TAG}
 
@@ -26,7 +26,10 @@ vendor:
 	glide install -v
 
 hostpath-provisioner: hostpath-provisioner.go
-	CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o hostpath-provisioner .
+	CGO_ENABLED=0 go build -o hostpath-provisioner .
+
+build-docker:
+	docker build --rm -t $(IMAGE) .
 
 clean:
 	rm hostpath-provisioner

@@ -96,7 +96,7 @@ spec:
 
       containers:
       - name: hostpath-provisioner
-        image: torchbox/k8s-hostpath-provisioner:latest
+        image: gfleury/k8s-hostpath-provisioner:latest
 
         volumeMounts:
         - name: volumes

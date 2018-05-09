@@ -24,13 +24,13 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 	"time"
 
+	"syscall"
+
 	"github.com/golang/glog"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
-	"github.com/pkg/xattr"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -38,14 +38,13 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubernetes/pkg/api/v1/helper"
-	"syscall"
 )
 
 /* Our constants */
 const (
 	resyncPeriod     = 15 * time.Second
-	provisionerName  = "torchbox.com/hostpath"
-	provisionerIDAnn = "torchbox.com/hostpath-provisioner-id"
+	provisionerName  = "github.com/hostpath"
+	provisionerIDAnn = "github.com/hostpath-provisioner-id"
 )
 
 /* Our provisioner class, which implements the controller API. */
@@ -56,8 +55,7 @@ type hostPathProvisioner struct {
 
 /* Storage the parsed configuration from the storage class */
 type hostPathParameters struct {
-	pvDir       string /* On-disk path of the PV root */
-	cephFSQuota bool   /* Whether to set CephFS quota xattrs */
+	pvDir string /* On-disk path of the PV root */
 }
 
 /*
@@ -105,17 +103,6 @@ func (p *hostPathProvisioner) Provision(options controller.VolumeOptions) (*v1.P
 		return nil, err
 	}
 
-	/* Set CephFS quota, if enabled */
-	if params.cephFSQuota {
-		err := xattr.Set(path, "ceph.quota.max_bytes", []byte(strconv.FormatInt(volbytes, 10)))
-		if err != nil {
-			glog.Errorf("could not set CephFS quota on %s (%s): %s",
-				options.PVName, path, err)
-			os.RemoveAll(path)
-			return nil, err
-		}
-	}
-
 	/* The actual PV we will create */
 	pv := &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
@@ -152,13 +139,13 @@ func (p *hostPathProvisioner) Delete(volume *v1.PersistentVolume) error {
 	ann, ok := volume.Annotations[provisionerIDAnn]
 	if !ok {
 		glog.Infof("not removing volume <%s>: identity annotation <%s> missing",
-			   volume.Name, provisionerIDAnn)
+			volume.Name, provisionerIDAnn)
 		return errors.New("identity annotation not found on PV")
 	}
 
 	if ann != p.identity {
 		glog.Infof("not removing volume <%s>: identity annotation <%s> does not match ours <%s>",
-			   volume.Name, p.identity, provisionerIDAnn)
+			volume.Name, p.identity, provisionerIDAnn)
 		return &controller.IgnoredError{Reason: "identity annotation on PV does not match ours"}
 	}
 
@@ -172,14 +159,14 @@ func (p *hostPathProvisioner) Delete(volume *v1.PersistentVolume) error {
 		metav1.GetOptions{})
 	if err != nil {
 		glog.Infof("not removing volume <%s>: failed to fetch storageclass: %s",
-			   volume.Name, err)
+			volume.Name, err)
 		return err
 	}
 
 	params, err := p.parseParameters(class.Parameters)
 	if err != nil {
 		glog.Infof("not removing volume <%s>: failed to parse storageclass parameters: %s",
-			   volume.Name, err)
+			volume.Name, err)
 		return err
 	}
 
@@ -204,16 +191,6 @@ func (p *hostPathProvisioner) parseParameters(parameters map[string]string) (*ho
 		switch strings.ToLower(k) {
 		case "pvdir":
 			params.pvDir = v
-
-		case "cephfsquota":
-			switch v {
-			case "true":
-				params.cephFSQuota = true
-			case "false":
-				params.cephFSQuota = false
-			default:
-				return nil, fmt.Errorf("invalid value for cephFSQuota: %s (should be true or false)", v)
-			}
 
 		default:
 			return nil, fmt.Errorf("invalid option %q", k)
