@@ -26,7 +26,7 @@ vendor:
 	glide install -v
 
 hostpath-provisioner: hostpath-provisioner.go
-	CGO_ENABLED=0 go build -o hostpath-provisioner .
+	CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o hostpath-provisioner .
 
 build-docker:
 	docker build --rm -t $(IMAGE) .
