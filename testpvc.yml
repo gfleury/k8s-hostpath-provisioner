@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: testpvc
+  labels:
+    k8s-hostpath-provisioner/mapped-path: pathdir01
+spec:
+  storageClassName: hostpath01
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi

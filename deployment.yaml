@@ -98,7 +98,7 @@ spec:
       volumes:
       - name: volumes
         hostPath:
-          path: /volumes
+          path: /data
 
       containers:
       - name: hostpath-provisioner
@@ -106,7 +106,7 @@ spec:
 
         volumeMounts:
         - name: volumes
-          mountPath: /volumes
+          mountPath: /data
 
         resources:
           limits:
