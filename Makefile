@@ -31,6 +31,10 @@ hostpath-provisioner: hostpath-provisioner.go
 build-docker:
 	docker build --rm -t $(IMAGE) .
 
+test:
+	go clean 
+	go test -check.v
+	
 clean:
 	rm hostpath-provisioner
 
